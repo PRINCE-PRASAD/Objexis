@@ -17,7 +17,8 @@ router.get("/fetch/:userId", ensureAuthenticated, (req, res) => {
     fetchUserFiles(req, res);
 });
 
+
 // Delete a file
-router.delete("/files/:fileId", ensureAuthenticated, deleteFile);
+router.delete("/delete/:fileId", ensureAuthenticated, deleteFile);
 
 module.exports = router;

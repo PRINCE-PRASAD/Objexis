@@ -303,15 +303,24 @@ function Home() {
     // ✅ Handle file deletion
     const handleFileDelete = async (fileId) => {
         try {
-            await axios.delete(`http://localhost:8080/api/files/${fileId}`, {
+            const response = await axios.delete(`http://localhost:8080/api/files/delete/${fileId}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
-            handleSuccess('File deleted successfully');
-            fetchUserFiles(userId);
+    
+            console.log("Delete response:", response.data); // Debugging
+    
+            if (response.data.success) {
+                handleSuccess('File deleted successfully');
+                fetchUserFiles(userId);
+            } else {
+                handleError('Failed to delete file: ' + response.data.message);
+            }
         } catch (error) {
+            console.error("Delete file error:", error);
             handleError('Failed to delete file');
         }
     };
+    
 
     // ✅ Handle logout
     const handleLogout = () => {

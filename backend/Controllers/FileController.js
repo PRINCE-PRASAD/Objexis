@@ -20,21 +20,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 
-// const fetchUserFiles = async (req, res) => {
 
-
-//     try {
-//         const userId = req.params.userId;
-
-//         // Ensure userId is an ObjectId
-//         const files = await File.find({ userId: userId });
-
-//         return res.status(200).json({ success: true, files });
-//     } catch (error) {
-//         console.error('Error fetching user files:', error);
-//         return res.status(500).json({ success: false, message: 'Failed to fetch files' });
-//     }
-// };
 
 const fetchUserFiles = async (req, res) => {
     try {
@@ -64,11 +50,11 @@ const fetchUserFiles = async (req, res) => {
 // Delete file from AWS S3 and MongoDB
 const deleteFile = async (req, res) => {
     try {
-        if (!req.user) {
+        if (!req.user || !req.user._id) {
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
 
-        const { userId } = req.user;
+        const userId = req.user._id;
         const { fileId } = req.params;
 
         const file = await File.findOne({ _id: fileId, userId });
@@ -76,16 +62,19 @@ const deleteFile = async (req, res) => {
             return res.status(404).json({ success: false, message: "File not found or unauthorized access" });
         }
 
-        // Extract the file key correctly from the S3 URL
-        const s3UrlParts = file.s3Url.split(`/${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/`);
-        const fileKey = s3UrlParts[1];
+        // Correct file key extraction
+        const s3UrlPrefix = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/`;
+        const fileKey = file.s3Url.replace(s3UrlPrefix, "");
 
         if (!fileKey) {
             return res.status(400).json({ success: false, message: "Invalid S3 URL format" });
         }
 
+        console.log("Deleting file from S3:", fileKey); // Debugging log
+
         // Delete from S3
         await s3.send(new DeleteObjectCommand({ Bucket: process.env.AWS_BUCKET_NAME, Key: fileKey }));
+
         // Delete from MongoDB
         await File.deleteOne({ _id: fileId });
 
@@ -95,6 +84,7 @@ const deleteFile = async (req, res) => {
         res.status(500).json({ success: false, message: "Error deleting file", error: error.message });
     }
 };
+
 
 const generateUploadUrl = async (req, res) => {
     try {
