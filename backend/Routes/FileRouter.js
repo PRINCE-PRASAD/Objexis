@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { uploadFile, fetchUserFiles, deleteFile, generateUploadUrl, saveFileMetadata } = require("../Controllers/FileController");
+const { uploadFile, fetchUserFiles, deleteFile, generateUploadUrl, saveFileMetadata, generatePreviewUrl } = require("../Controllers/FileController");
 const ensureAuthenticated = require("../Middlewares/Auth");
 
 // Generate a pre-signed upload URL
@@ -17,6 +17,7 @@ router.get("/fetch/:userId", ensureAuthenticated, (req, res) => {
     fetchUserFiles(req, res);
 });
 
+router.get("/preview/:fileId", ensureAuthenticated, generatePreviewUrl);
 
 // Delete a file
 router.delete("/delete/:fileId", ensureAuthenticated, deleteFile);

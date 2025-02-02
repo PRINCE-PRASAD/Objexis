@@ -17,13 +17,13 @@
 //         const storedUser = localStorage.getItem('loggedInUser');
 //         const storedUserId = localStorage.getItem('userId'); // Ensure this key matches what you set during login
 //         const token = localStorage.getItem('token');
-    
+  
 //         if (!storedUser || !token || !storedUserId) {
 //             navigate('/login');
 //         } else {
 //             setLoggedInUser(storedUser);
 //             setUserId(storedUserId);
-    
+  
 //             // Fetch files only if storedUserId is valid
 //             if (storedUserId) {
 //                 fetchUserFiles(storedUserId); // Pass the userId here
@@ -32,11 +32,11 @@
 //     }, [navigate]);
 
 //     useEffect(() => {
+//         // Avoid making the API call if userId is not set
 //         if (userId) {
 //             fetchUserFiles(userId);
 //         }
 //     }, [userId]);
-
 
 //     const fetchUserFiles = async (userId) => {
 //         try {
@@ -45,12 +45,16 @@
 //                 handleError("Authentication failed. Please log in again.");
 //                 return;
 //             }
-    
+
+//             if (!userId) {
+//                 handleError("User ID is not available.");
+//                 return;
+//             }
+
 //             const response = await axios.get(`http://localhost:8080/api/files/fetch/${userId}`, {
-//                 // const response = await axios.get(`http://localhost:8080/api/files/fetch/679cc7ab5dc2cf66b54793d5`, {
 //                 headers: { Authorization: `Bearer ${token}` },
 //             });
-    
+
 //             if (response.data.success) {
 //                 setFiles(response.data.files || []); // Ensure `files` is set correctly
 //             } else {
@@ -61,7 +65,6 @@
 //             handleError("Error fetching files");
 //         }
 //     };
-    
 
 //     // ✅ Handle file upload
 //     const handleFileUpload = async (e) => {
@@ -112,15 +115,24 @@
 //     // ✅ Handle file deletion
 //     const handleFileDelete = async (fileId) => {
 //         try {
-//             await axios.delete(`http://localhost:8080/api/files/${fileId}`, {
+//             const response = await axios.delete(`http://localhost:8080/api/files/delete/${fileId}`, {
 //                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
 //             });
-//             handleSuccess('File deleted successfully');
-//             fetchUserFiles(userId);
+    
+//             console.log("Delete response:", response.data); // Debugging
+    
+//             if (response.data.success) {
+//                 handleSuccess('File deleted successfully');
+//                 fetchUserFiles(userId);
+//             } else {
+//                 handleError('Failed to delete file: ' + response.data.message);
+//             }
 //         } catch (error) {
+//             console.error("Delete file error:", error);
 //             handleError('Failed to delete file');
 //         }
 //     };
+    
 
 //     // ✅ Handle logout
 //     const handleLogout = () => {
@@ -130,9 +142,23 @@
 //     };
 
 //     // ✅ Handle preview of file
-//     const handlePreview = (url) => {
-//         window.open(url, '_blank');
+//     const handleFilePreview = async (fileId) => {
+//         try {
+//             const response = await axios.get(`http://localhost:8080/api/files/preview/${fileId}`, {
+//                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+//             });
+    
+//             if (response.data.success) {
+//                 window.open(response.data.previewUrl, "_blank"); // Open preview in new tab
+//             } else {
+//                 handleError("Failed to generate preview URL");
+//             }
+//         } catch (error) {
+//             console.error("Preview file error:", error);
+//             handleError("Error previewing file");
+//         }
 //     };
+    
 
 //     return (
 //         <div className="home-full-page">
@@ -159,19 +185,18 @@
 //                     <h2>Your Files:</h2>
 //                     {files.length > 0 ? (
 //                         <ul>
-//                         {files.map((file) => (
-//                             <li key={file._id} className="file-item">
-//                                 <span>{file.fileName}</span>
-//                                 <button className="preview-btn" onClick={() => window.open(file.s3Url, '_blank')}>
-//                                     Preview
-//                                 </button>
-//                                 <button className="delete-btn" onClick={() => handleFileDelete(file._id)}>
-//                                     Delete
-//                                 </button>
-//                             </li>
-//                         ))}
-//                     </ul>
-                    
+//                             {files.map((file) => (
+//                                 <li key={file._id} className="file-item">
+//                                     <span>{file.fileName}</span>
+//                                     <button className="preview-btn" onClick={() => window.open(file.s3Url, '_blank')}>
+//                                         Preview
+//                                     </button>
+//                                     <button className="delete-btn" onClick={() => handleFileDelete(file._id)}>
+//                                         Delete
+//                                     </button>
+//                                 </li>
+//                             ))}
+//                         </ul>
 //                     ) : (
 //                         <p>No files uploaded yet.</p>
 //                     )}
@@ -184,6 +209,7 @@
 // }
 
 // export default Home;
+
 
 
 import React, { useEffect, useState } from 'react';
@@ -203,24 +229,21 @@ function Home() {
 
     useEffect(() => {
         const storedUser = localStorage.getItem('loggedInUser');
-        const storedUserId = localStorage.getItem('userId'); // Ensure this key matches what you set during login
+        const storedUserId = localStorage.getItem('userId');
         const token = localStorage.getItem('token');
-  
+
         if (!storedUser || !token || !storedUserId) {
             navigate('/login');
         } else {
             setLoggedInUser(storedUser);
             setUserId(storedUserId);
-  
-            // Fetch files only if storedUserId is valid
             if (storedUserId) {
-                fetchUserFiles(storedUserId); // Pass the userId here
+                fetchUserFiles(storedUserId);
             }
         }
     }, [navigate]);
 
     useEffect(() => {
-        // Avoid making the API call if userId is not set
         if (userId) {
             fetchUserFiles(userId);
         }
@@ -244,7 +267,7 @@ function Home() {
             });
 
             if (response.data.success) {
-                setFiles(response.data.files || []); // Ensure `files` is set correctly
+                setFiles(response.data.files || []);
             } else {
                 handleError("Failed to fetch files.");
             }
@@ -254,7 +277,6 @@ function Home() {
         }
     };
 
-    // ✅ Handle file upload
     const handleFileUpload = async (e) => {
         e.preventDefault();
         if (!selectedFile) {
@@ -267,7 +289,6 @@ function Home() {
         const fileSize = selectedFile.size;
 
         try {
-            // Step 1: Get Pre-Signed URL
             const response = await axios.post('http://localhost:8080/api/files/generate-upload-url',
                 { fileName, fileType },
                 { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
@@ -280,10 +301,8 @@ function Home() {
 
             const { uploadUrl, fileKey } = response.data;
 
-            // Step 2: Upload File to S3
             await axios.put(uploadUrl, selectedFile, { headers: { 'Content-Type': fileType } });
 
-            // Step 3: Save Metadata in MongoDB
             await axios.post('http://localhost:8080/api/files/save-metadata',
                 { fileName, fileKey, fileSize, fileType, uploadedBy: userId },
                 { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
@@ -300,15 +319,12 @@ function Home() {
         }
     };
 
-    // ✅ Handle file deletion
     const handleFileDelete = async (fileId) => {
         try {
             const response = await axios.delete(`http://localhost:8080/api/files/delete/${fileId}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
-    
-            console.log("Delete response:", response.data); // Debugging
-    
+
             if (response.data.success) {
                 handleSuccess('File deleted successfully');
                 fetchUserFiles(userId);
@@ -320,18 +336,28 @@ function Home() {
             handleError('Failed to delete file');
         }
     };
-    
 
-    // ✅ Handle logout
+    const handleFilePreview = async (fileId) => {
+        try {
+            const response = await axios.get(`http://localhost:8080/api/files/preview/${fileId}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+
+            if (response.data.success) {
+                window.open(response.data.previewUrl, "_blank");
+            } else {
+                handleError("Failed to generate preview URL");
+            }
+        } catch (error) {
+            console.error("Preview file error:", error);
+            handleError("Error previewing file");
+        }
+    };
+
     const handleLogout = () => {
         localStorage.clear();
         handleSuccess('Logged out successfully');
         navigate('/login');
-    };
-
-    // ✅ Handle preview of file
-    const handlePreview = (url) => {
-        window.open(url, '_blank');
     };
 
     return (
@@ -362,7 +388,7 @@ function Home() {
                             {files.map((file) => (
                                 <li key={file._id} className="file-item">
                                     <span>{file.fileName}</span>
-                                    <button className="preview-btn" onClick={() => window.open(file.s3Url, '_blank')}>
+                                    <button className="preview-btn" onClick={() => handleFilePreview(file._id)}>
                                         Preview
                                     </button>
                                     <button className="delete-btn" onClick={() => handleFileDelete(file._id)}>

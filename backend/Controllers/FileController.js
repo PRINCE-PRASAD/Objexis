@@ -40,6 +40,41 @@ const fetchUserFiles = async (req, res) => {
 };
 
 
+const generatePreviewUrl = async (req, res) => {
+    try {
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+
+        const { fileId } = req.params;
+        const userId = req.user._id;
+
+        const file = await File.findOne({ _id: fileId, userId });
+        if (!file) {
+            return res.status(404).json({ success: false, message: "File not found or unauthorized access" });
+        }
+
+        const s3UrlPrefix = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/`;
+        const fileKey = file.s3Url.replace(s3UrlPrefix, "");
+
+        if (!fileKey) {
+            return res.status(400).json({ success: false, message: "Invalid S3 URL format" });
+        }
+
+        const params = {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: fileKey,
+            Expires: 300, // URL valid for 5 minutes
+        };
+
+        const previewUrl = await getSignedUrl(s3, new GetObjectCommand(params));
+
+        res.status(200).json({ success: true, previewUrl });
+    } catch (error) {
+        console.error("Generate preview URL error:", error);
+        res.status(500).json({ success: false, message: "Error generating preview URL" });
+    }
+};
 
 
 
@@ -159,4 +194,4 @@ const saveFileMetadata = async (req, res) => {
 
 
 
-module.exports = { upload, fetchUserFiles, deleteFile, generateUploadUrl, saveFileMetadata };
+module.exports = { upload, fetchUserFiles, deleteFile, generateUploadUrl, saveFileMetadata, generatePreviewUrl};
